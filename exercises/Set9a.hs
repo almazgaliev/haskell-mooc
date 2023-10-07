@@ -26,7 +26,12 @@ import Mooc.Todo
 -- Otherwise return "Ok."
 
 workload :: Int -> Int -> String
-workload nExercises hoursPerExercise = todo
+workload nExercises hoursPerExercise
+  | hours > 100 = "Holy moly!"
+  | hours < 10 = "Piece of cake!"
+  | otherwise = "Ok."
+ where
+  hours = nExercises * hoursPerExercise
 
 ------------------------------------------------------------------------------
 -- Ex 2: Implement the function echo that builds a string like this:
@@ -39,7 +44,7 @@ workload nExercises hoursPerExercise = todo
 -- Hint: use recursion
 
 echo :: String -> String
-echo = todo
+echo = intercalate ", " . tails
 
 ------------------------------------------------------------------------------
 -- Ex 3: A country issues some banknotes. The banknotes have a serial
@@ -51,8 +56,11 @@ echo = todo
 -- Given a list of bank note serial numbers (strings), count how many
 -- are valid.
 
+isValidBanknote :: String -> Bool
+isValidBanknote s = s !! 2 == s !! 4 || s !! 3 == s !! 5
+
 countValid :: [String] -> Int
-countValid = todo
+countValid = length . filter isValidBanknote
 
 ------------------------------------------------------------------------------
 -- Ex 4: Find the first element that repeats two or more times _in a
@@ -63,8 +71,8 @@ countValid = todo
 --   repeated [1,2,2,3,3] ==> Just 2
 --   repeated [1,2,1,2,3,3] ==> Just 3
 
-repeated :: Eq a => [a] -> Maybe a
-repeated = todo
+repeated :: (Eq a) => [a] -> Maybe a
+repeated = fmap head . (find ((> 1) . length) . group)
 
 ------------------------------------------------------------------------------
 -- Ex 5: A laboratory has been collecting measurements. Some of the
@@ -85,8 +93,17 @@ repeated = todo
 --   sumSuccess []
 --     ==> Left "no data"
 
+isRight (Right _) = True
+isRight _ = False
+liftA2' op = \x y -> pure op <*> x <*> y
+
 sumSuccess :: [Either String Int] -> Either String Int
-sumSuccess = todo
+sumSuccess xs
+  | len == 0 = Left "no data"
+  | otherwise = foldr (liftA2' (+)) (Right 0) xs'
+ where
+  xs' = filter isRight xs
+  len = length xs'
 
 ------------------------------------------------------------------------------
 -- Ex 6: A combination lock can either be open or closed. The lock
@@ -108,30 +125,36 @@ sumSuccess = todo
 --   isOpen (open "0000" (lock (changeCode "0000" (open "1234" aLock)))) ==> True
 --   isOpen (open "1234" (lock (changeCode "0000" (open "1234" aLock)))) ==> False
 
-data Lock = LockUndefined
-  deriving Show
+type Code = String
+type PrivateCode = Code
+data Lock = Lock PrivateCode Bool
+  deriving (Show)
 
 -- aLock should be a locked lock with the code "1234"
 aLock :: Lock
-aLock = todo
+aLock = Lock "1234" False
 
 -- isOpen returns True if the lock is open
 isOpen :: Lock -> Bool
-isOpen = todo
+isOpen (Lock _ isopen) = isopen
 
 -- open tries to open the lock with the given code. If the code is
 -- wrong, nothing happens.
 open :: String -> Lock -> Lock
-open = todo
+open pwd closed@(Lock pwdp _)
+  | pwdp == pwd = Lock pwdp True
+  | otherwise = closed
 
 -- lock closes a lock. If the lock is already closed, nothing happens.
 lock :: Lock -> Lock
-lock = todo
+lock a@(Lock pwdp False) = a
+lock (Lock pwdp True) = Lock pwdp False
 
 -- changeCode changes the code of an open lock. If the lock is closed,
 -- nothing happens.
 changeCode :: String -> Lock -> Lock
-changeCode = todo
+changeCode newPwd (Lock _ True) = Lock newPwd True
+changeCode newPwd closed@(Lock _ False) = closed
 
 ------------------------------------------------------------------------------
 -- Ex 7: Here's a type Text that just wraps a String. Implement an Eq
@@ -146,9 +169,11 @@ changeCode = todo
 --   Text "abc"  == Text "abcd"     ==> False
 --   Text "a bc" == Text "ab  d\n"  ==> False
 
-data Text = Text String
-  deriving Show
+newtype Text = Text String
+  deriving (Show)
 
+instance Eq Text where
+  Text s1 == Text s2 = filter (not . isSpace) s1 == filter (not . isSpace) s2
 
 ------------------------------------------------------------------------------
 -- Ex 8: We can represent functions or mappings as lists of pairs.
@@ -180,9 +205,19 @@ data Text = Text String
 --   a more complex example: note how "omicron" and "c" are ignored
 --     compose [("a","alpha"),("b","beta"),("c","gamma")] [("alpha",1),("beta",2),("omicron",15)]
 --       ==> [("a",1),("b",2)]
+isJust (Just a) = True
+isJust Nothing = False
 
-compose :: (Eq a, Eq b) => [(a,b)] -> [(b,c)] -> [(a,c)]
-compose = todo
+compose :: (Eq a, Eq b) => [(a, b)] -> [(b, c)] -> [(a, c)]
+compose atable btable = foldr f [] atable
+ where
+  f (key, key1) acc
+    | isJust maybeVal = (key, val) : acc
+    | otherwise = acc
+   where
+    maybeVal = lookup key1 btable
+    val = fromJ maybeVal
+    fromJ (Just a) = a
 
 ------------------------------------------------------------------------------
 -- Ex 9: Reorder a list using a list of indices.
@@ -226,4 +261,4 @@ multiply :: Permutation -> Permutation -> Permutation
 multiply p q = map (\i -> p !! (q !! i)) (identity (length p))
 
 permute :: Permutation -> [a] -> [a]
-permute = todo
+permute indexes = fmap snd . sortOn fst . zip indexes
