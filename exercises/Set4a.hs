@@ -238,9 +238,18 @@ freqs = helper (Map.fromList [])
 --     ==> fromList [("Bob",100),("Mike",50)]
 --   transfer "Lisa" "Mike" 20 bank
 --     ==> fromList [("Bob",100),("Mike",50)]
+isJust (Just _) = True
+isJust Nothing  = False
 
 transfer :: String -> String -> Int -> Map.Map String Int -> Map.Map String Int
-transfer from to amount bank = todo
+transfer from to amount bank = if canTransfer then
+    Map.insertWith (+) to amount . Map.insertWith (flip (-)) from amount $ bank
+  else bank
+   where
+    moneyFrom = bank Map.!? from
+    hasMoney = isJust moneyFrom
+    (Just fromValue) = moneyFrom
+    canTransfer = amount > 0 && hasMoney && fromValue >= amount && Map.member to bank
 
 ------------------------------------------------------------------------------
 -- Ex 11: given an Array and two indices, swap the elements in the indices.
@@ -250,7 +259,10 @@ transfer from to amount bank = todo
 --         ==> array (1,4) [(1,"one"),(2,"three"),(3,"two"),(4,"four")]
 
 swap :: (Array.Ix i) => i -> i -> Array.Array i a -> Array.Array i a
-swap i j arr = todo
+swap i j arr = arr `with` [(i, arr `at` j), (j, arr `at` i )]
+  where 
+    with = (Array.//)
+    at = (Array.!)
 
 ------------------------------------------------------------------------------
 -- Ex 12: given an Array, find the index of the largest element. You
@@ -261,4 +273,9 @@ swap i j arr = todo
 -- Hint: check out Data.Array.indices or Data.Array.assocs
 
 maxIndex :: (Array.Ix i, Ord a) => Array.Array i a -> i
-maxIndex = todo
+maxIndex xs = fst . foldr compare initial . Array.assocs $ xs
+ where
+  initial = head $ Array.assocs xs
+  elem@(j, x) `compare` acc@(i, max)
+    | x > max = elem
+    | otherwise = acc
